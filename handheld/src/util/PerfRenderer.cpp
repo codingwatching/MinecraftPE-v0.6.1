@@ -186,7 +186,7 @@ void PerfRenderer::renderFpsMeter( float tickTime )
 		totalPercentage += result.percentage;
 	}
 
-	glEnable(GL_TEXTURE_2D);
+	glEnable2(GL_TEXTURE_2D);
 
 	{
 		std::stringstream msg;

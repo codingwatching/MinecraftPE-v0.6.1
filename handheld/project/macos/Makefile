@@ -9,6 +9,9 @@ CC     := clang++
 #   brew install sdl2 libpng zlib
 SDL2_CFLAGS  := $(shell sdl2-config --cflags)
 SDL2_LIBS    := $(shell sdl2-config --libs)
+SDL3_LIBDIR  := $(shell pkg-config --variable=libdir sdl3 2>/dev/null)
+comma        := ,
+SDL3_RPATH   := $(if $(SDL3_LIBDIR),-Wl$(comma)-rpath$(comma)$(SDL3_LIBDIR))
 PNG_CFLAGS   := $(shell pkg-config --cflags libpng 2>/dev/null || echo "-I/opt/homebrew/include")
 PNG_LIBS     := $(shell pkg-config --libs   libpng 2>/dev/null || echo "-lpng")
 
@@ -51,6 +54,7 @@ CFLAGS := \
 # ── Linker flags ──────────────────────────────────────────────────────────────
 LDFLAGS := \
 	$(SDL2_LIBS) \
+	$(SDL3_RPATH) \
 	$(PNG_LIBS) \
 	-framework OpenGL \
 	-framework OpenAL \

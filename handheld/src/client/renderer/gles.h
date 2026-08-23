@@ -224,6 +224,19 @@ void glFogx_shader(GLenum pname, GLint param);
 
 #endif // shader platforms
 
+// Fog state has to be mirrored into the programmable pipeline.  Keep the
+// wrapper explicit (like the existing *2 helpers) so desktop GL headers and
+// the real functions remain usable inside gles.cpp.
+#if defined(MACOS) || defined(LINUX) || (defined(__APPLE__) && !defined(MACOS))
+#define glFogf2  glFogf_shader
+#define glFogfv2 glFogfv_shader
+#define glFogx2  glFogx_shader
+#else
+#define glFogf2  glFogf
+#define glFogfv2 glFogfv
+#define glFogx2  glFogx
+#endif
+
 // glAlphaFunc2 definition
 #if defined(MACOS) || defined(LINUX)
 #define glAlphaFunc2 glAlphaFunc_shader

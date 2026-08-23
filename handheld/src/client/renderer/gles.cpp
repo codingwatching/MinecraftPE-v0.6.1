@@ -104,10 +104,11 @@ static const char* s_fragSrc =
 static const char* s_vertSrc =
     "#version 120\n"
     "void main() {\n"
-    "    gl_Position    = gl_ModelViewProjectionMatrix * gl_Vertex;\n"
+    "    vec4 eyePos    = gl_ModelViewMatrix * gl_Vertex;\n"
+    "    gl_Position    = gl_ProjectionMatrix * eyePos;\n"
     "    gl_FrontColor  = gl_Color;\n"
     "    gl_TexCoord[0] = gl_MultiTexCoord0;\n"
-    "    gl_FogFragCoord = abs(gl_Position.z / gl_Position.w);\n"
+    "    gl_FogFragCoord = abs(eyePos.z);\n"
     "}\n";
 
 static const char* s_fragSrc =
@@ -117,6 +118,11 @@ static const char* s_fragSrc =
     "uniform bool      useAlphaTest;\n"
     "uniform float     alphaTestRef;\n"
     "uniform bool      useFog;\n"
+    "uniform float     fogStart;\n"
+    "uniform float     fogEnd;\n"
+    "uniform vec4      fogColor;\n"
+    "uniform int       fogMode;\n"
+    "uniform float     fogDensity;\n"
     "void main() {\n"
     "    vec4 color = gl_Color;\n"
     "    if (useTexture) {\n"
@@ -126,12 +132,19 @@ static const char* s_fragSrc =
     "        discard;\n"
     "    }\n"
     "    if (useFog) {\n"
-    "        float denom = gl_Fog.end - gl_Fog.start;\n"
-    "        float fogFactor = clamp((gl_Fog.end - gl_FogFragCoord) / (denom + 0.001), 0.0, 1.0);\n"
-    "        gl_FragColor = mix(gl_Fog.color, color, fogFactor);\n"
-    "    } else {\n"
-    "        gl_FragColor = color;\n"
+    "        float fogFactor;\n"
+    "        if (fogMode == 2048) {\n"
+    "            fogFactor = exp(-fogDensity * gl_FogFragCoord);\n"
+    "        } else if (fogMode == 2049) {\n"
+    "            float d = fogDensity * gl_FogFragCoord;\n"
+    "            fogFactor = exp(-(d * d));\n"
+    "        } else {\n"
+    "            float denom = max(fogEnd - fogStart, 0.0001);\n"
+    "            fogFactor = (fogEnd - gl_FogFragCoord) / denom;\n"
+    "        }\n"
+    "        color = mix(fogColor, color, clamp(fogFactor, 0.0, 1.0));\n"
     "    }\n"
+    "    gl_FragColor = color;\n"
     "}\n";
 #endif
 
@@ -165,7 +178,7 @@ bool  g_fogEnabled       = false;
 float g_fogStart         = 0.0f;
 float g_fogEnd           = 1.0f;
 float g_fogColor[4]      = {1,1,1,1};
-int   g_fogMode          = 0x0801; // GL_LINEAR
+int   g_fogMode          = GL_LINEAR;
 float g_fogDensity       = 1.0f;
 float g_currentColor[4]  = {1,1,1,1};
 
@@ -238,6 +251,11 @@ void shaderInit() {
     g_loc_useAlphaTest = glGetUniformLocation(g_shader_program, "useAlphaTest");
     g_loc_alphaTestRef = glGetUniformLocation(g_shader_program, "alphaTestRef");
     g_loc_useFog       = glGetUniformLocation(g_shader_program, "useFog");
+    g_loc_fogStart     = glGetUniformLocation(g_shader_program, "fogStart");
+    g_loc_fogEnd       = glGetUniformLocation(g_shader_program, "fogEnd");
+    g_loc_fogColor     = glGetUniformLocation(g_shader_program, "fogColor");
+    g_loc_fogMode      = glGetUniformLocation(g_shader_program, "fogMode");
+    g_loc_fogDensity   = glGetUniformLocation(g_shader_program, "fogDensity");
     g_loc_tex          = glGetUniformLocation(g_shader_program, "tex");
 #endif
 
@@ -253,13 +271,11 @@ void shaderInit() {
     if (g_loc_useVertexColor >= 0) glUniform1i(g_loc_useVertexColor, 1);
     if (g_loc_uColor       >= 0) glUniform4f(g_loc_uColor, 1, 1, 1, 1);
 
-#if defined(__APPLE__) && !defined(MACOS)
     if (g_loc_fogStart   >= 0) glUniform1f(g_loc_fogStart, g_fogStart);
     if (g_loc_fogEnd     >= 0) glUniform1f(g_loc_fogEnd, g_fogEnd);
     if (g_loc_fogColor   >= 0) glUniform4fv(g_loc_fogColor, 1, g_fogColor);
     if (g_loc_fogMode    >= 0) glUniform1i(g_loc_fogMode, g_fogMode);
     if (g_loc_fogDensity >= 0) glUniform1f(g_loc_fogDensity, g_fogDensity);
-#endif
 
     LOGI("[shader] compiled and active (program=%u)\n", g_shader_program);
 }
@@ -398,6 +414,9 @@ void glColor4f_shader(float r, float g, float b, float a) {
 }
 
 void glFogf_shader(GLenum pname, GLfloat param) {
+#if defined(MACOS) || defined(LINUX)
+    glFogf(pname, param);
+#endif
     if (pname == GL_FOG_START) {
         g_fogStart = param;
         if (g_shaderEnabled && g_loc_fogStart >= 0) glUniform1f(g_loc_fogStart, param);
@@ -411,6 +430,9 @@ void glFogf_shader(GLenum pname, GLfloat param) {
 }
 
 void glFogfv_shader(GLenum pname, const GLfloat* params) {
+#if defined(MACOS) || defined(LINUX)
+    glFogfv(pname, params);
+#endif
     if (pname == GL_FOG_COLOR) {
         g_fogColor[0] = params[0];
         g_fogColor[1] = params[1];
@@ -422,6 +444,9 @@ void glFogfv_shader(GLenum pname, const GLfloat* params) {
 }
 
 void glFogx_shader(GLenum pname, GLint param) {
+#if defined(MACOS) || defined(LINUX)
+    glFogi(pname, param);
+#endif
     if (pname == GL_FOG_MODE) {
         g_fogMode = param;
         if (g_shaderEnabled && g_loc_fogMode >= 0) glUniform1i(g_loc_fogMode, param);

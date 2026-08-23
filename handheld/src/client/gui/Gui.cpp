@@ -93,13 +93,13 @@ void Gui::render(float a, bool mouseFree, int xMouse, int yMouse) {
 	}
 
 	if(minecraft->player->getSleepTimer() > 0) {
-		glDisable(GL_DEPTH_TEST);
-		glDisable(GL_ALPHA_TEST);
+		glDisable2(GL_DEPTH_TEST);
+		glDisable2(GL_ALPHA_TEST);
 
 		renderSleepAnimation(screenWidth, screenHeight);
 
-		glEnable(GL_ALPHA_TEST);
-		glEnable(GL_DEPTH_TEST);
+		glEnable2(GL_ALPHA_TEST);
+		glEnable2(GL_DEPTH_TEST);
 	}
 
 	renderToolBar(a, ySlot, screenWidth);
@@ -110,7 +110,7 @@ void Gui::render(float a, bool mouseFree, int xMouse, int yMouse) {
 	#ifdef APPLE_DEMO_PROMOTION
 		font->drawShadow("Demo version", 2, 0 + 2, 0xffffffff);
 	#endif /*APPLE_DEMO_PROMOTION*/
-	glEnable(GL_BLEND);
+	glEnable2(GL_BLEND);
 	unsigned int max = 10;
     bool isChatting = false;
 	renderChatMessages(screenHeight, max, isChatting, font);
@@ -828,8 +828,8 @@ void Gui::renderToolBar( float a, int ySlot, const int screenWidth ) {
 		x += 20;
 	}
 	t.endOverrideAndDraw();
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_TEXTURE_2D);
+	glEnable2(GL_DEPTH_TEST);
+	glEnable2(GL_TEXTURE_2D);
 
 	//w.stop();
 	//w.printEvery(100, "gui-slots");

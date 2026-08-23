@@ -106,15 +106,13 @@ void MouseDevice::feed(char actionButtonId, char buttonData, short x, short y, s
 
 	_inputs.push_back(MouseAction(actionButtonId, buttonData, x, y, dx, dy, 0));
 
-	// Always update position — button events (DOWN/UP) carry valid coordinates.
-	// Without this, getX()/getY() returns stale position from the last MOVE,
-	// causing touches to register at the wrong location on touchscreens.
-	_xOld = _x;
-	_yOld = _y;
-	_x = x;
-	_y = y;
-
 	if (actionButtonId != MouseAction::ACTION_MOVE) {
+		// Button events carry the click position, but they are not movement.
+		// Keep the old and current positions in sync so delta-mode camera input
+		// cannot interpret a click at a new absolute position as mouse motion.
+		_xOld = _x = x;
+		_yOld = _y = y;
+
 		_buttonStates[actionButtonId] = buttonData;
 
 		if (actionButtonId == MouseAction::ACTION_LEFT)
@@ -130,6 +128,11 @@ void MouseDevice::feed(char actionButtonId, char buttonData, short x, short y, s
 			_firstMovementType = 1;
 		else
 			_firstMovementType = 0;
+
+		_xOld = _x;
+		_yOld = _y;
+		_x = x;
+		_y = y;
 	}
 }
 
